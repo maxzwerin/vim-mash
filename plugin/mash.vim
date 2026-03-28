@@ -5,12 +5,40 @@
 if exists('g:loaded_mash') | finish | endif
 let g:loaded_mash = 1
 
-" if !has('popupwin') || !exists('*screenpos')
-"     echohl WarningMsg
-"     echom 'mash.vim requires Vim 8.1.2090+ (popup windows + screenpos)'
-"     echohl None
-"     finish
-" endif
+function! s:open_label_popup(text, row, col) abort
+    if has('nvim')
+        let buf = nvim_create_buf(0, 1)
+        call nvim_buf_set_lines(buf, 0, -1, 1, [a:text])
+        let id = nvim_open_win(buf, 0, {
+            \ 'relative': 'editor',
+            \ 'row':       a:row - 1,
+            \ 'col':       a:col - 1,
+            \ 'width':     1,
+            \ 'height':    1,
+            \ 'style':     'minimal',
+            \ 'focusable': 0,
+        \ })
+        call nvim_win_set_option(id, 'winhl', 'Normal:MashLabel')
+        return id
+    else
+        return popup_create(a:text, {
+            \ 'line':      a:row,
+            \ 'col':       a:col,
+            \ 'highlight': 'MashLabel',
+            \ 'zindex':    200,
+            \ 'fixed':     1,
+            \ 'wrap':      0,
+        \ })
+    endif
+endfunction
+
+function! s:close_popup(id) abort
+    if has('nvim')
+        call nvim_win_close(a:id, 1)
+    else
+        call popup_close(a:id)
+    endif
+endfunction
 
 let s:labels = 'asdfghjklqwertyuiopzxcvbnmASDFGHJKLQWERTYUIOPZXCVBNM'
 
@@ -37,7 +65,7 @@ function! s:clear_visual() abort
     let s:st.match_ids = []
 
     for pid in s:st.popup_ids
-        try | call popup_close(pid) | catch | endtry
+        try | call s:close_popup(pid) | catch | endtry
     endfor
     let s:st.popup_ids = []
 endfunction
@@ -113,14 +141,7 @@ function! s:search_and_highlight() abort
         " screenpos() gives the screen row/col for buffer lnum/col (1-based col)
         let sp = screenpos(s:st.original_winid, m.line, m.end_col + 1)
         if sp.row > 0 && sp.col > 0
-            call add(s:st.popup_ids, popup_create(label, {
-                \ 'line':      sp.row,
-                \ 'col':       sp.col,
-                \ 'highlight': 'MashLabel',
-                \ 'zindex':    200,
-                \ 'fixed':     1,
-                \ 'wrap':      0,
-            \ }))
+            call add(s:st.popup_ids, s:open_label_popup(label, sp.row, sp.col))
         endif
     endfor
 endfunction
@@ -157,7 +178,7 @@ function! s:jump() abort
     while 1
         let c = getcharstr()
         if c == "\<Esc>" || c == "\<C-c>" || c == "\<CR>"
-            call c:cleanup()
+            call s:cleanup()
             break
         elseif c == "\<Del>" || c == "\<BS>"
             if len(s:st.search_text) > 0
