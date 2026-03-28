@@ -5,25 +5,22 @@
 if exists('g:loaded_mash') | finish | endif
 let g:loaded_mash = 1
 
-function! s:open_label_popup(text, row, col) abort
+if has('nvim')
+    let s:ns = nvim_create_namespace('mash')
+endif
+
+function! s:open_label_popup(text, lnum, end_col) abort
     if has('nvim')
-        let buf = nvim_create_buf(0, 1)
-        call nvim_buf_set_lines(buf, 0, -1, 1, [a:text])
-        let id = nvim_open_win(buf, 0, {
-            \ 'relative': 'editor',
-            \ 'row':       a:row - 1,
-            \ 'col':       a:col - 1,
-            \ 'width':     1,
-            \ 'height':    1,
-            \ 'style':     'minimal',
-            \ 'focusable': 0,
+        return nvim_buf_set_extmark(s:st.original_bufnr, s:ns, a:lnum - 1, a:end_col, {
+            \ 'virt_text':     [[a:text, 'MashLabel']],
+            \ 'virt_text_pos': 'overlay',
+            \ 'hl_mode':       'combine',
         \ })
-        call nvim_win_set_option(id, 'winhl', 'Normal:MashLabel')
-        return id
     else
+        let sp = screenpos(s:st.original_winid, a:lnum, a:end_col + 1)
         return popup_create(a:text, {
-            \ 'line':      a:row,
-            \ 'col':       a:col,
+            \ 'line':      sp.row,
+            \ 'col':       sp.col,
             \ 'highlight': 'MashLabel',
             \ 'zindex':    200,
             \ 'fixed':     1,
@@ -34,7 +31,7 @@ endfunction
 
 function! s:close_popup(id) abort
     if has('nvim')
-        call nvim_win_close(a:id, 1)
+        call nvim_buf_del_extmark(s:st.original_bufnr, s:ns, a:id)
     else
         call popup_close(a:id)
     endif
@@ -141,7 +138,8 @@ function! s:search_and_highlight() abort
         " screenpos() gives the screen row/col for buffer lnum/col (1-based col)
         let sp = screenpos(s:st.original_winid, m.line, m.end_col + 1)
         if sp.row > 0 && sp.col > 0
-            call add(s:st.popup_ids, s:open_label_popup(label, sp.row, sp.col))
+            call add(s:st.popup_ids, s:open_label_popup(label, m.line, m.end_col))
+            "call add(s:st.popup_ids, s:open_label_popup(label, sp.row, sp.col))
         endif
     endfor
 endfunction
