@@ -1,6 +1,6 @@
-" mash.vim - jump around code
-" Maintainer:   Max Zwerin
-" Version:      1.0
+" mash.vim - jump around your code
+" Maintainer: Max Zwerin
+" Version:    1.1
 
 if exists('g:loaded_mash') | finish | endif
 let g:loaded_mash = 1
@@ -81,8 +81,8 @@ function! s:search_and_highlight() abort
         endwhile
     endfor
 
-    " Collect the character immediately after each match (ducks).
-    " Labels that equal a duck are skipped to avoid mis-fires.
+    " Collect the character immediately after each match
+    " Labels that equal a duck are skipped to avoid mis-fires
     let ducks = []
     for m in raw
         if m.end_col < len(m.line_text)
@@ -155,39 +155,27 @@ function! s:jump() abort
     echo '> '
 
     while 1
-        let ch = getchar()
-
-        if type(ch) == type(0)
-            if ch == 27 || ch == 3 " <Esc> / <C-c>
-                call s:cleanup()
-                break
-            elseif ch == 13 " <CR> - cancel
-                call s:cleanup()
-                break
-            elseif ch == 8 || ch == 127 " <BS> - delete last char
-                if len(s:st.search_text) > 0
-                    let s:st.search_text = s:st.search_text[:-2]
-                    call s:search_and_highlight()
-                    redraw
-                    echo '> ' . s:st.search_text
-                endif
-                continue
-            elseif ch < 32 " other control chars - ignore
-                continue
+        let c = getcharstr()
+        if c == "\<Esc>" || c == "\<C-c>" || c == "\<CR>"
+            call c:cleanup()
+            break
+        elseif c == "\<Del>" || c == "\<BS>"
+            if len(s:st.search_text) > 0
+                let s:st.search_text = s:st.search_text[:-2]
+                call s:search_and_highlight()
+                redraw
+                echo '> ' . s:st.search_text
             endif
-            let char = nr2char(ch)
-        else
-            let char = ch
+            continue
         endif
-
-        " If search is non-empty and the char matches a displayed label - jump
-        if s:st.search_text !=# '' && has_key(s:st.matches, char)
-            call s:jump_to_label(char)
+            
+        if s:st.search_text !=# '' && has_key(s:st.matches, c)
+            call s:jump_to_label(c)
             break
         endif
 
         " Otherwise grow the search string
-        let s:st.search_text .= char
+        let s:st.search_text .= c
         call s:search_and_highlight()
 
         " Auto-jump when exactly one match remains
@@ -202,7 +190,6 @@ function! s:jump() abort
 endfunction
 
 call s:setup_hl()
-"nnoremap <silent> <C-f> :call <SID>jump()<CR>
 nnoremap <silent> <Plug>MashJump :call <SID>jump()<CR>
 
 if !hasmapto('<Plug>MashJump') || maparg('<C-f>', 'n') ==# ''
