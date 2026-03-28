@@ -5,12 +5,12 @@
 if exists('g:loaded_mash') | finish | endif
 let g:loaded_mash = 1
 
-if !has('popupwin') || !exists('*screenpos')
-    echohl WarningMsg
-    echom 'mash.vim requires Vim 8.1.2090+ (popup windows + screenpos)'
-    echohl None
-    finish
-endif
+" if !has('popupwin') || !exists('*screenpos')
+"     echohl WarningMsg
+"     echom 'mash.vim requires Vim 8.1.2090+ (popup windows + screenpos)'
+"     echohl None
+"     finish
+" endif
 
 let s:labels = 'asdfghjklqwertyuiopzxcvbnmASDFGHJKLQWERTYUIOPZXCVBNM'
 
